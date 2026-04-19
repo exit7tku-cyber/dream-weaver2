@@ -89,4 +89,229 @@
             align-items: center; justify-content: center; z-index: 100; text-align: center; padding: 20px; backdrop-filter: blur(12px);
         }
 
-        .restart-btn { padding: 12px 40px; background: var(--accent)
+        .restart-btn { padding: 12px 40px; background: var(--accent); color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
+        .mute-btn { margin-top: 20px; background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 15px; border-radius: 20px; cursor: pointer; font-size: 12px; }
+        
+        /* 預渲染容器：防止圖片顯示延遲 */
+        #preload-container { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 預渲染所有圖片 -->
+    <div id="preload-container"></div>
+    <div class="stars-container" id="stars"></div>
+
+    <div class="header">
+        <h1>🌙 夢境編織者</h1>
+        <p>配對夢境絲線，編織今晚的好夢</p>
+    </div>
+
+    <div class="stats" id="stats-area">
+        <div class="hp-container">
+            <span>修復能量</span>
+            <div id="hp-bar"><div id="hp-fill"></div></div>
+            <span id="hp-text">12/12</span>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--accent); font-weight: bold;">進度: <span id="score">0</span> / 5</div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div id="overlay">
+        <h2 id="over-title" style="font-size: 2rem; margin-bottom: 15px;"></h2>
+        <div id="over-msg" style="font-size: 1rem; line-height: 1.6; color: #cbd5e1; max-width: 350px; margin-bottom: 25px;"></div>
+        <div id="easter-egg" style="display:none; margin-bottom: 20px;">
+            <a href="https://www.instagram.com/exit.7_studio/" target="_blank" style="color:var(--ig-color); text-decoration:none; font-weight:bold;">📸 @exit.7_studio</a>
+        </div>
+        <button class="restart-btn" onclick="initGame()">再試一次</button>
+    </div>
+
+    <button class="mute-btn" onclick="toggleMute()" id="muteBtn">🔊 音效音樂：開啟</button>
+
+<script>
+    // 1. 圖片預渲染與星星
+    const imageList = ['panda.png', 'panda_s.png', 'sheep.png', 'sheep_s.png', 'cat.png', 'cat_s.png', 'cloud.png', 'cloud_s.png', 'bulb.png', 'bulb_s.png', 'coffee.png', 'phone.png'];
+    const preloadContainer = document.getElementById('preload-container');
+    imageList.forEach(src => {
+        const img = new Image();
+        img.src = src;
+        preloadContainer.appendChild(img); // 強制瀏覽器渲染
+    });
+
+    function createStars() {
+        const container = document.getElementById('stars');
+        for (let i = 0; i < 40; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = star.style.height = Math.random() * 3 + 'px';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+            container.appendChild(star);
+        }
+    }
+    createStars();
+
+    // 2. 遊戲設定
+    const configData = [
+        { id: 'p', img: 'panda.png' }, { id: 'p', img: 'panda_s.png' },
+        { id: 's', img: 'sheep.png' }, { id: 's', img: 'sheep_s.png' },
+        { id: 'c', img: 'cat.png' },   { id: 'c', img: 'cat_s.png' },
+        { id: 'l', img: 'cloud.png' }, { id: 'l', img: 'cloud_s.png' },
+        { id: 'b', img: 'bulb.png' },  { id: 'b', img: 'bulb_s.png' },
+        { id: 'T1', img: 'coffee.png', type: 'trap' },
+        { id: 'T2', img: 'phone.png', type: 'trap' }
+    ];
+
+    const WIN_MESSAGES = ["所有的錯置都已歸位，此刻，世界安靜得只剩下你的呼吸。", "恭喜通關！大腦已完成今日導航，目標：深度睡眠。", "你已證明了自己的敏銳，現在，去證明你能擁有一場好夢。", "關掉螢幕，夢境的探險才要真正開始，晚安。"];
+    const LOSE_MESSAGES = ["連這幾張牌都記不住？看來你的大腦已經累到拒絕營業了。但這點難度都完成不了你睡得著嗎？", "挑戰先暫停，身體的電池也需要充電才能繼續戰鬥。", "這局沒過不是結束，而是給大腦一個明天再玩的理由。", "沒過關很氣？氣也沒用，反正你明早起床後會更氣昨晚沒睡。", "加油！雖然差一點點，但身體說它現在更想抱抱被窩。"];
+
+    const MAX_HP = 12;
+    let flipped = [], matches = 0, hp = MAX_HP, locked = false, firstClick = true;
+
+    const sounds = {
+        flip: new Audio('flip.mp3'), match: new Audio('match.mp3'),
+        fail: new Audio('fail.mp3'), trap: new Audio('trap.mp3'),
+        win: new Audio('win.mp3'), lose: new Audio('lose.mp3'), bgm: new Audio('bgm.mp3')
+    };
+    sounds.bgm.loop = true;
+
+    let isMuted = false;
+    function playSound(name) {
+        if (!isMuted && sounds[name]) {
+            sounds[name].currentTime = 0;
+            sounds[name].play().catch(() => {});
+        }
+    }
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        document.getElementById('muteBtn').innerText = isMuted ? "🔇 音效音樂：關閉" : "🔊 音效音樂：開啟";
+        if (isMuted) sounds.bgm.pause();
+        else if (!firstClick) sounds.bgm.play();
+    }
+
+    function spawnDamagePopup(x, y, amount) {
+        const popup = document.createElement('div');
+        popup.className = 'dmg-popup';
+        popup.innerText = `-${amount} HP`;
+        popup.style.left = (x - 30) + 'px';
+        popup.style.top = (y - 30) + 'px';
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 600);
+    }
+
+    // 3. 核心邏輯
+    function initGame() {
+        flipped = []; matches = 0; hp = MAX_HP; locked = false; firstClick = true;
+        document.getElementById('score').innerText = '0';
+        document.getElementById('overlay').style.display = 'none';
+        updateHPUI();
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        const shuffled = [...configData].sort(() => Math.random() - 0.5);
+        shuffled.forEach(data => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.id = data.id;
+            card.dataset.type = data.type || 'normal';
+            card.innerHTML = `<div class="face front">Zzz</div><div class="face back"><img src="${data.img}"></div>`;
+            card.onclick = (e) => handleFlip(card, e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY);
+            grid.appendChild(card);
+        });
+    }
+
+    function handleFlip(card, x, y) {
+        if (locked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+        if (firstClick) {
+            if (!isMuted) sounds.bgm.play().catch(() => {});
+            firstClick = false;
+        }
+
+        playSound('flip');
+        card.classList.add('flipped');
+
+        // 陷阱即時回饋
+        if (card.dataset.type === 'trap') {
+            locked = true;
+            hp -= 2;
+            updateHPUI(true);
+            playSound('trap');
+            spawnDamagePopup(x, y, 2);
+            document.body.classList.add('flash-red');
+            card.classList.add('shake');
+            
+            // 縮短陷阱懲罰時間，讓節奏更順
+            setTimeout(() => {
+                document.body.classList.remove('flash-red');
+                card.classList.remove('flipped', 'shake');
+                locked = false;
+                if (hp <= 0) end(false);
+            }, 600); 
+            return;
+        }
+
+        flipped.push({card, x, y});
+        if (flipped.length === 2) {
+            locked = true;
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        const [c1, c2] = flipped;
+        if (c1.card.dataset.id === c2.card.dataset.id) {
+            setTimeout(() => {
+                playSound('match');
+                c1.card.classList.add('matched'); c2.card.classList.add('matched');
+                matches++;
+                document.getElementById('score').innerText = matches;
+                flipped = []; locked = false;
+                if (matches === 5) end(true);
+            }, 300);
+        } else {
+            setTimeout(() => {
+                playSound('fail');
+                c1.card.classList.remove('flipped'); c2.card.classList.remove('flipped');
+                hp -= 1;
+                updateHPUI(true);
+                spawnDamagePopup(c2.x, c2.y, 1);
+                flipped = []; locked = false;
+                if (hp <= 0) end(false);
+            }, 600);
+        }
+    }
+
+    function updateHPUI(shouldShake = false) {
+        const fill = document.getElementById('hp-fill');
+        const text = document.getElementById('hp-text');
+        const statsArea = document.getElementById('stats-area');
+        hp = Math.max(0, hp);
+        fill.style.width = (hp / MAX_HP * 100) + '%';
+        text.innerText = `${hp}/${MAX_HP}`;
+        if (hp <= 3) fill.style.backgroundColor = 'var(--danger)';
+        else if (hp <= 6) fill.style.backgroundColor = '#facc15';
+        else fill.style.backgroundColor = 'var(--success)';
+        if (shouldShake) {
+            statsArea.classList.add('hp-shake');
+            setTimeout(() => statsArea.classList.remove('hp-shake'), 400);
+        }
+    }
+
+    function end(win) {
+        sounds.bgm.pause();
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'flex';
+        document.getElementById('over-title').innerText = win ? "✨ 夢境織成" : "😫 絲線斷裂";
+        document.getElementById('over-title').style.color = win ? "var(--success)" : "var(--danger)";
+        document.getElementById('over-msg').innerText = win ? WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)] : LOSE_MESSAGES[Math.floor(Math.random() * LOSE_MESSAGES.length)];
+        if (Math.random() < 0.4) document.getElementById('easter-egg').style.display = 'block';
+        playSound(win ? 'win' : 'lose');
+    }
+
+    initGame();
+</script>
+</body>
+</html>
