@@ -42,21 +42,18 @@
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         .shake { animation: shake 0.2s ease-in-out 0s 2; }
         
-        /* 損血畫面閃紅 */
         .flash-red { animation: flash 0.3s; }
         @keyframes flash { 50% { background-color: #450a0a; } }
 
-        /* 損血 UI 震動 */
         @keyframes hpShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
         .hp-shake { animation: hpShake 0.4s ease-in-out; }
 
-        /* 漂浮文字動畫 */
         .dmg-popup {
-            position: fixed; color: var(--danger); font-weight: bold; font-size: 1.5rem;
-            pointer-events: none; z-index: 1000; animation: floatUp 1s forwards;
+            position: fixed; color: var(--danger); font-weight: bold; font-size: 1.6rem;
+            pointer-events: none; z-index: 1000; animation: floatUp 0.8s forwards;
             text-shadow: 0 0 8px rgba(0,0,0,0.8);
         }
-        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
 
         /* --- UI 樣式 --- */
         .header { text-align: center; padding: 15px; z-index: 10; }
@@ -83,10 +80,9 @@
 
         .card { 
             aspect-ratio: 3 / 4; cursor: pointer; position: relative; 
-            transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); 
+            transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
         }
         
-        /* 卡片呼吸燈特效 */
         .card:not(.flipped):not(.matched):hover .front { box-shadow: 0 0 15px var(--accent); border-color: #fff; }
 
         .card.flipped { transform: rotateY(180deg); }
@@ -98,11 +94,10 @@
             justify-content: center; border-radius: 12px; 
             box-shadow: 0 6px 12px rgba(0,0,0,0.3); border: 2px solid var(--accent); 
         }
-        .front { background: var(--card-front); font-size: 1.2rem; color: var(--accent); transition: 0.3s; }
+        .front { background: var(--card-front); font-size: 1.2rem; color: var(--accent); }
         .back { background: #ffffff; transform: rotateY(180deg); overflow: hidden; color: #1e293b; }
         .back img { max-width: 85%; max-height: 85%; object-fit: contain; }
 
-        /* 結束視窗毛玻璃質感 */
         #overlay { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(15, 23, 42, 0.95); 
@@ -135,7 +130,6 @@
 </head>
 <body id="main-body">
 
-    <!-- 動態背景容器 -->
     <div class="stars-container" id="stars"></div>
 
     <div class="header">
@@ -169,7 +163,6 @@
     <button class="mute-btn" onclick="toggleMute()" id="muteBtn">🔊 音效音樂：開啟</button>
 
 <script>
-    // --- 特效功能：星星背景 ---
     function createStars() {
         const container = document.getElementById('stars');
         for (let i = 0; i < 45; i++) {
@@ -186,18 +179,16 @@
     }
     createStars();
 
-    // --- 特效功能：漂浮文字 ---
     function spawnDamagePopup(x, y, amount) {
         const popup = document.createElement('div');
         popup.className = 'dmg-popup';
         popup.innerText = `-${amount} HP`;
-        popup.style.left = x + 'px';
-        popup.style.top = y + 'px';
+        popup.style.left = (x - 20) + 'px';
+        popup.style.top = (y - 20) + 'px';
         document.body.appendChild(popup);
-        setTimeout(() => popup.remove(), 1000);
+        setTimeout(() => popup.remove(), 800);
     }
 
-    // --- 原有內容與文案 (不變) ---
     const configData = [
         { id: 'p', img: 'panda.png' }, { id: 'p', img: 'panda_s.png' },
         { id: 's', img: 'sheep.png' }, { id: 's', img: 'sheep_s.png' },
@@ -209,10 +200,9 @@
     ];
 
     const WIN_MESSAGES = ["所有的錯置都已歸位，此刻，世界安靜得只剩下你的呼吸。", "恭喜通關！大腦已完成今日導航，目標：深度睡眠。", "你已證明了自己的敏銳，現在，去證明你能擁有一場好夢。", "關掉螢幕，夢境的探險才要真正開始，晚安。"];
-    const LOSE_MESSAGES = ["連這幾張牌都記不住？看來你的大腦已經累到拒絕營業了。但這點難度都完成不了你睡得著嗎？", "挑戰先暫停，身體的電池也需要充電才能繼續戰鬥。", "這局沒過不是結束，而是給大腦一個明天再玩的理由。", "沒過關很氣？氣也沒用，反正你明早起床後會更氣昨晚沒睡。", "加油！雖然差一點點，但身體說它現在更想抱抱被窩。"];
+    const LOSE_MESSAGES = ["連這幾張牌都記不住？看來你的大腦已經累到拒絕營業了。但這點難度都完成不了你睡得著嗎？", "挑戰先暫停，身體的電池也需要充電才能繼續戰鬥。", "這局沒過進步中，而是給大腦一個明天再玩的理由。", "沒過關很氣？氣也沒用，反正你明早起床後會更氣昨晚沒睡。", "加油！雖然差一點點，但身體說它現在更想抱抱被窩。"];
     const EASTER_EGG_TEXT = "還沒追蹤七號出口Instagram!趕快去追蹤啊！追完再睡！";
 
-    // --- 遊戲邏輯與設定 ---
     const MAX_HP = 12;
     let flipped = [], matches = 0, hp = MAX_HP, locked = false, firstClick = true;
 
@@ -243,8 +233,6 @@
         document.getElementById('score').innerText = '0';
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('easter-egg').style.display = 'none';
-        sounds.bgm.pause();
-        sounds.bgm.currentTime = 0;
         updateHPUI();
 
         const grid = document.getElementById('grid');
@@ -262,12 +250,17 @@
                     <img src="${data.img}" onerror="this.style.display='none'; this.parentElement.innerText='${data.id}'">
                 </div>
             `;
-            card.onclick = (e) => handleFlip(card, e);
+            const flipEvent = (e) => {
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                handleFlip(card, clientX, clientY);
+            };
+            card.addEventListener('click', flipEvent);
             grid.appendChild(card);
         });
     }
 
-    function handleFlip(card, e) {
+    function handleFlip(card, x, y) {
         if (locked || card.classList.contains('flipped') || card.classList.contains('matched')) return;
 
         if (firstClick) {
@@ -280,59 +273,51 @@
 
         if (card.dataset.type === 'trap') {
             locked = true;
-            hp -= 2; // 陷阱扣 2
-            updateHPUI(true); // 帶震動
+            hp -= 2;
+            updateHPUI(true);
             playSound('trap');
-            
-            // 觸發特效
-            const x = e.clientX || (e.touches && e.touches[0].clientX);
-            const y = e.clientY || (e.touches && e.touches[0].clientY);
             spawnDamagePopup(x, y, 2);
             document.body.classList.add('flash-red');
             card.classList.add('shake');
             
+            // 修正延遲：縮短陷阱顯示時間至 700ms
             setTimeout(() => {
                 document.body.classList.remove('flash-red');
                 card.classList.remove('flipped', 'shake');
                 locked = false;
                 if (hp <= 0) end(false);
-            }, 1000);
+            }, 700);
             return;
         }
 
-        flipped.push(card);
+        flipped.push({card, x, y});
         if (flipped.length === 2) {
             locked = true;
-            checkMatch(e);
+            checkMatch();
         }
     }
 
-    function checkMatch(e) {
+    function checkMatch() {
         const [c1, c2] = flipped;
-        if (c1.dataset.id === c2.dataset.id) {
+        if (c1.card.dataset.id === c2.card.dataset.id) {
             setTimeout(() => {
                 playSound('match');
-                c1.classList.add('matched'); c2.classList.add('matched');
+                c1.card.classList.add('matched'); c2.card.classList.add('matched');
                 matches++;
                 document.getElementById('score').innerText = matches;
                 flipped = []; locked = false;
                 if (matches === 5) end(true);
-            }, 500);
+            }, 400);
         } else {
             setTimeout(() => {
                 playSound('fail');
-                c1.classList.remove('flipped'); c2.classList.remove('flipped');
-                hp -= 1; // 翻錯扣 1
-                updateHPUI(true); // 帶震動
-                
-                // 觸發特效
-                const x = e.clientX || (e.touches && e.touches[0].clientX);
-                const y = e.clientY || (e.touches && e.touches[0].clientY);
-                spawnDamagePopup(x, y, 1);
-
+                c1.card.classList.remove('flipped'); c2.card.classList.remove('flipped');
+                hp -= 1;
+                updateHPUI(true);
+                spawnDamagePopup(c2.x, c2.y, 1);
                 flipped = []; locked = false;
                 if (hp <= 0) end(false);
-            }, 800);
+            }, 700);
         }
     }
 
@@ -345,7 +330,6 @@
         fill.style.width = (currentHP / MAX_HP * 100) + '%';
         text.innerText = `${currentHP}/${MAX_HP}`;
 
-        // 根據剩餘能量變色
         if (currentHP <= 3) fill.style.backgroundColor = 'var(--danger)';
         else if (currentHP <= 6) fill.style.backgroundColor = '#facc15';
         else fill.style.backgroundColor = 'var(--success)';
