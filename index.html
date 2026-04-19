@@ -25,7 +25,7 @@
             min-height: 100vh; margin: 0; padding-bottom: 30px; overflow-x: hidden; 
         }
 
-        /* 渲染優化：強制硬體加速 */
+        /* 背景與渲染優化 */
         .stars-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
         .star { position: absolute; background: white; border-radius: 50%; opacity: 0.3; animation: twinkle var(--duration) infinite ease-in-out; }
         @keyframes twinkle { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.3); } }
@@ -46,10 +46,10 @@
         @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-80px); opacity: 0; } }
 
         .header { text-align: center; padding: 15px; }
-        .header h1 { font-size: 1.8rem; text-shadow: 0 0 10px var(--accent); margin: 0 0 5px 0; }
+        .header h1 { font-size: 1.8rem; text-shadow: 0 0 10px var(--accent); margin: 0; }
         
         .stats { 
-            display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; 
+            display: flex; flex-direction: column; gap: 8px; margin: 15px 0; 
             background: rgba(255,255,255,0.08); padding: 12px 20px; 
             border-radius: 20px; border: 1px solid rgba(129, 140, 248, 0.4);
             align-items: center; width: 90%; max-width: 400px; backdrop-filter: blur(10px);
@@ -60,7 +60,12 @@
         #hp-fill { width: 100%; height: 100%; background: var(--success); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         #hp-text { font-weight: bold; font-size: 0.9rem; min-width: 45px; text-align: right; }
 
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 95%; max-width: 440px; perspective: 1000px; }
+        /* Grid 加入硬體加速層 */
+        .grid { 
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; 
+            width: 95%; max-width: 440px; perspective: 1000px; 
+            transform: translateZ(0); 
+        }
 
         .card { 
             aspect-ratio: 3 / 4; cursor: pointer; position: relative; 
@@ -80,7 +85,7 @@
         .back { background: #ffffff; transform: rotateY(180deg); overflow: hidden; }
         .back img { 
             max-width: 85%; max-height: 85%; object-fit: contain; 
-            backface-visibility: hidden; will-change: transform;
+            backface-visibility: hidden; 
         }
 
         #overlay { 
@@ -90,21 +95,15 @@
         }
 
         .restart-btn { padding: 12px 40px; background: var(--accent); color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.1rem; }
-        .mute-btn { margin-top: 20px; background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 15px; border-radius: 20px; cursor: pointer; font-size: 12px; }
-        
-        /* 預渲染容器：防止圖片顯示延遲 */
-        #preload-container { position: absolute; width: 0; height: 0; overflow: hidden; opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <!-- 預渲染所有圖片 -->
-    <div id="preload-container"></div>
     <div class="stars-container" id="stars"></div>
 
     <div class="header">
         <h1>🌙 夢境編織者</h1>
-        <p>配對夢境絲線，編織今晚的好夢</p>
+        <p style="margin: 5px 0 0 0; font-size: 0.9rem; opacity: 0.8;">配對夢境絲線，編織今晚的好夢</p>
     </div>
 
     <div class="stats" id="stats-area">
@@ -127,17 +126,20 @@
         <button class="restart-btn" onclick="initGame()">再試一次</button>
     </div>
 
-    <button class="mute-btn" onclick="toggleMute()" id="muteBtn">🔊 音效音樂：開啟</button>
+    <button style="margin-top: 20px; background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 15px; border-radius: 20px; cursor: pointer; font-size: 12px;" onclick="toggleMute()" id="muteBtn">🔊 音效音樂：開啟</button>
 
 <script>
-    // 1. 圖片預渲染與星星
-    const imageList = ['panda.png', 'panda_s.png', 'sheep.png', 'sheep_s.png', 'cat.png', 'cat_s.png', 'cloud.png', 'cloud_s.png', 'bulb.png', 'bulb_s.png', 'coffee.png', 'phone.png'];
-    const preloadContainer = document.getElementById('preload-container');
-    imageList.forEach(src => {
-        const img = new Image();
-        img.src = src;
-        preloadContainer.appendChild(img); // 強制瀏覽器渲染
-    });
+    // 1. 極速預載邏輯
+    const preloadAssets = () => {
+        const images = ['panda.png', 'panda_s.png', 'sheep.png', 'sheep_s.png', 'cat.png', 'cat_s.png', 'cloud.png', 'cloud_s.png', 'bulb.png', 'bulb_s.png', 'coffee.png', 'phone.png'];
+        images.forEach(src => {
+            const img = new Image();
+            img.src = src;
+            // 使用 decode() 確保 GPU 提前解碼圖片
+            img.decode().then(() => console.log(src + " decoded")).catch(() => {});
+        });
+    };
+    preloadAssets();
 
     function createStars() {
         const container = document.getElementById('stars');
@@ -153,7 +155,7 @@
     }
     createStars();
 
-    // 2. 遊戲設定
+    // 2. 遊戲資料 (保留原本內容)
     const configData = [
         { id: 'p', img: 'panda.png' }, { id: 'p', img: 'panda_s.png' },
         { id: 's', img: 'sheep.png' }, { id: 's', img: 'sheep_s.png' },
@@ -202,7 +204,7 @@
         setTimeout(() => popup.remove(), 600);
     }
 
-    // 3. 核心邏輯
+    // 3. 核心邏輯優化
     function initGame() {
         flipped = []; matches = 0; hp = MAX_HP; locked = false; firstClick = true;
         document.getElementById('score').innerText = '0';
@@ -217,7 +219,11 @@
             card.dataset.id = data.id;
             card.dataset.type = data.type || 'normal';
             card.innerHTML = `<div class="face front">Zzz</div><div class="face back"><img src="${data.img}"></div>`;
-            card.onclick = (e) => handleFlip(card, e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY);
+            
+            // 使用 pointerdown 減少移動端延遲
+            card.onpointerdown = (e) => {
+                handleFlip(card, e.clientX, e.clientY);
+            };
             grid.appendChild(card);
         });
     }
@@ -233,23 +239,23 @@
         playSound('flip');
         card.classList.add('flipped');
 
-        // 陷阱即時回饋
+        // Trap 邏輯：點擊即執行，不等待動畫
         if (card.dataset.type === 'trap') {
             locked = true;
             hp -= 2;
-            updateHPUI(true);
+            updateHPUI(true); // 震動
             playSound('trap');
             spawnDamagePopup(x, y, 2);
             document.body.classList.add('flash-red');
             card.classList.add('shake');
             
-            // 縮短陷阱懲罰時間，讓節奏更順
+            // 縮短 Trap 停留時間，讓節奏更 snappy
             setTimeout(() => {
                 document.body.classList.remove('flash-red');
                 card.classList.remove('flipped', 'shake');
                 locked = false;
                 if (hp <= 0) end(false);
-            }, 600); 
+            }, 650); 
             return;
         }
 
@@ -288,11 +294,11 @@
         const fill = document.getElementById('hp-fill');
         const text = document.getElementById('hp-text');
         const statsArea = document.getElementById('stats-area');
-        hp = Math.max(0, hp);
-        fill.style.width = (hp / MAX_HP * 100) + '%';
-        text.innerText = `${hp}/${MAX_HP}`;
-        if (hp <= 3) fill.style.backgroundColor = 'var(--danger)';
-        else if (hp <= 6) fill.style.backgroundColor = '#facc15';
+        const displayHP = Math.max(0, hp);
+        fill.style.width = (displayHP / MAX_HP * 100) + '%';
+        text.innerText = `${displayHP}/${MAX_HP}`;
+        if (displayHP <= 3) fill.style.backgroundColor = 'var(--danger)';
+        else if (displayHP <= 7) fill.style.backgroundColor = '#facc15';
         else fill.style.backgroundColor = 'var(--success)';
         if (shouldShake) {
             statsArea.classList.add('hp-shake');
@@ -307,7 +313,7 @@
         document.getElementById('over-title').innerText = win ? "✨ 夢境織成" : "😫 絲線斷裂";
         document.getElementById('over-title').style.color = win ? "var(--success)" : "var(--danger)";
         document.getElementById('over-msg').innerText = win ? WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)] : LOSE_MESSAGES[Math.floor(Math.random() * LOSE_MESSAGES.length)];
-        if (Math.random() < 0.4) document.getElementById('easter-egg').style.display = 'block';
+        if (Math.random() < 0.35) document.getElementById('easter-egg').style.display = 'block';
         playSound(win ? 'win' : 'lose');
     }
 
